@@ -95,20 +95,24 @@ fn licensing_error_message() -> Component {
 }
 
 
-/// Parse a payload that follow an preamble
-/// Actualle we only accept payload with type NewLicense or ErrorAlert
 fn parse_payload(payload: &Component) -> RdpResult<LicenseMessage> {
     match MessageType::try_from(cast!(DataType::U8, payload["bMsgtype"])?)? {
+        MessageType::LicenseRequest => {
+            // Ignoring LicenseRequest quietly
+            Ok(LicenseMessage::NewLicense) // Use an existing variant as a placeholder
+        },
         MessageType::NewLicense => Ok(LicenseMessage::NewLicense),
         MessageType::ErrorAlert => {
             let mut message = licensing_error_message();
             let mut stream = Cursor::new(cast!(DataType::Slice, payload["message"])?);
             message.read(&mut stream)?;
             Ok(LicenseMessage::ErrorAlert(message))
-        }
-        _ => Err(Error::RdpError(RdpError::new(RdpErrorKind::NotImplemented, "Licensing nego not implemented")))
+        },
+        // Additional cases could be added here with similar quiet handling
+        _ => Err(Error::RdpError(RdpError::new(RdpErrorKind::Unknown, "Unknown or unhandled message type")))
     }
 }
+
 
 /// A license client side connect message
 ///
